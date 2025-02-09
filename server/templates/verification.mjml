@@ -1,0 +1,11 @@
+<mjml>
+    <mj-body background-color="#f0f0f0">
+        <mj-section>
+            <mj-column>
+                <mj-text font-size="20px" color="#333" align="center">Activez votre compte</mj-text>
+                <mj-text align="center">Bonjour, veuillez cliquer sur le lien ci-dessous pour activer votre compte :</mj-text>
+                <mj-button href="{{activationLink}}" background-color="#007BFF" color="#ffffff">Activer mon compte</mj-button>
+            </mj-column>
+        </mj-section>
+    </mj-body>
+</mjml>
