@@ -2,6 +2,7 @@
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const sendVerificationEmail = require('../utils/sendVerificationEmail');
 
 const register = async (req, res) => {
     const { firstName, lastName, username, email, password } = req.body;
@@ -10,30 +11,30 @@ const register = async (req, res) => {
     }
 
     try {
-        // Vérifier si l'utilisateur existe déjà (email ou username)
         let user = await User.findOne({ $or: [{ email }, { username }] });
         if (user) {
             return res.status(400).json({ msg: "L'utilisateur existe déjà." });
         }
 
-        // Hash du mot de passe
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Création de l'utilisateur
         user = new User({
             firstName,
             lastName,
             username,
             email,
             password: hashedPassword,
+            isVerified: false,
         });
 
         await user.save();
 
-        // (Ici, vous pourrez déclencher l'envoi de l'email de validation avec MJML)
+        // Génération d'un token de vérification (valide 1 jour)
+        const verificationToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        await sendVerificationEmail(user, verificationToken);
 
-        res.status(201).json({ msg: 'Utilisateur créé avec succès.' });
+        res.status(201).json({ msg: 'Utilisateur créé. Veuillez vérifier votre email pour activer votre compte.' });
     } catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Erreur serveur.' });
@@ -47,21 +48,21 @@ const login = async (req, res) => {
     }
 
     try {
-        // Vérifier que l'utilisateur existe
         const user = await User.findOne({ username });
         if (!user) {
             return res.status(400).json({ msg: 'Identifiants invalides.' });
         }
 
-        // Vérification du mot de passe
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ msg: 'Identifiants invalides.' });
         }
 
-        // (Optionnel : vérifier que l'email a été validé)
+        // Optionnel : vérifier que l'email est validé
+        if (!user.isVerified) {
+            return res.status(400).json({ msg: 'Veuillez activer votre compte via le lien envoyé par email.' });
+        }
 
-        // Générer le token JWT
         const payload = { user: { id: user._id } };
         jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
             if (err) throw err;
@@ -73,4 +74,25 @@ const login = async (req, res) => {
     }
 };
 
-module.exports = { register, login };
+const verifyEmail = async (req, res) => {
+    const { token } = req.params;
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(400).json({ msg: 'Utilisateur non trouvé.' });
+        }
+        if (user.isVerified) {
+            return res.status(400).json({ msg: 'Compte déjà vérifié.' });
+        }
+        user.isVerified = true;
+        await user.save();
+        res.status(200).json({ msg: 'Compte vérifié avec succès.' });
+    } catch (error) {
+        console.error(error);
+        res.status(400).json({ msg: 'Token invalide ou expiré.' });
+    }
+};
+
+module.exports = { register, login, verifyEmail };
