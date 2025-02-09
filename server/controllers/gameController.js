@@ -103,4 +103,48 @@ const finishGame = async (gameId, winnerId) => {
     }
 };
 
-module.exports = { createGame, joinGame, getFinishedGames, finishGame };
+// Ajoute ces fonctions dans ton gameController.js
+
+// Vérifie l'état du jeu (victoire, match nul)
+const checkGameStatus = (board) => {
+    for (let i = 0; i < 3; i++) {
+        if (board[i][0] && board[i][0] === board[i][1] && board[i][1] === board[i][2]) return { winner: board[i][0] };
+        if (board[0][i] && board[0][i] === board[1][i] && board[1][i] === board[2][i]) return { winner: board[0][i] };
+    }
+    if (board[0][0] && board[0][0] === board[1][1] && board[1][1] === board[2][2]) return { winner: board[0][0] };
+    if (board[0][2] && board[0][2] === board[1][1] && board[1][1] === board[2][0]) return { winner: board[0][2] };
+    if (!board.some((row) => row.includes(''))) return { tie: true };
+    return null;
+};
+
+// Fonction pour traiter un coup joué
+const playMove = async (req, res) => {
+    const { gameId, row, col, symbol } = req.body;
+    try {
+        let game = await Game.findOne({ uuid: gameId });
+        if (!game) return res.status(404).json({ msg: 'Partie non trouvée.' });
+        if (game.board[row][col] !== '') return res.status(400).json({ msg: 'Cellule occupée.' });
+
+        game.board[row][col] = symbol;
+        const result = checkGameStatus(game.board);
+
+        if (result) {
+            game.status = 'finished';
+            if (result.winner) game.winner = req.user.id; // Adaptation selon ta logique
+            await game.save();
+            global.io.to(gameId).emit('gameUpdate', { board: game.board, result });
+            return res.status(200).json({ board: game.board, result });
+        }
+
+        // Changement de tour
+        game.currentTurn = game.players.find((id) => id !== req.user.id);
+        await game.save();
+        global.io.to(gameId).emit('gameUpdate', { board: game.board, currentTurn: game.currentTurn });
+        return res.status(200).json({ board: game.board, currentTurn: game.currentTurn });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ msg: 'Erreur serveur.' });
+    }
+};
+
+module.exports = { createGame, joinGame, getFinishedGames, finishGame, playMove };
