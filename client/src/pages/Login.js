@@ -1,5 +1,7 @@
+// src/pages/Login.js
 import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 
 const Login = () => {
@@ -19,9 +21,14 @@ const Login = () => {
             setError('Tous les champs sont requis.');
             return;
         }
-        // Appel API de connexion ici (simulé)
-        setUser({ username: formData.username });
-        navigate('/dashboard');
+        try {
+            const res = await api.post('/auth/login', formData);
+            localStorage.setItem('token', res.data.token);
+            setUser({ username: formData.username });
+            navigate('/dashboard');
+        } catch (err) {
+            setError(err.response?.data?.msg || 'Erreur de connexion');
+        }
     };
 
     return (

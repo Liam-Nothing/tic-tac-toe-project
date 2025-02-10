@@ -1,8 +1,25 @@
-const Game = () => (
-    <div className="p-8">
-        <h1 className="text-2xl font-bold">Partie</h1>
-        <p>Ici se déroulera le jeu.</p>
-    </div>
-);
+import { useEffect, useState } from 'react';
+import socket from '../utils/socket';
+
+const Game = () => {
+    const [gameData, setGameData] = useState(null);
+
+    useEffect(() => {
+        socket.on('gameUpdate', (data) => {
+            setGameData(data);
+            console.log('Mise à jour reçue:', data);
+        });
+        return () => {
+            socket.off('gameUpdate');
+        };
+    }, []);
+
+    return (
+        <div>
+            <h1>Partie</h1>
+            {gameData && <pre>{JSON.stringify(gameData, null, 2)}</pre>}
+        </div>
+    );
+};
 
 export default Game;
