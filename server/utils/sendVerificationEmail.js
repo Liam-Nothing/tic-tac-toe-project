@@ -9,7 +9,7 @@ const sendVerificationEmail = async (user, token) => {
     let mjmlTemplate = fs.readFileSync(templatePath, 'utf8');
 
     // Création du lien d'activation (adaptable selon votre frontend)
-    const activationLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify/${token}`;
+    const activationLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify/?token=${token}`;
     mjmlTemplate = mjmlTemplate.replace('{{activationLink}}', activationLink);
 
     const htmlOutput = mjml2html(mjmlTemplate);
