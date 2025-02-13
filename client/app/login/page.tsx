@@ -12,11 +12,27 @@ export default function Login() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Simulation d'une connexion
-        if (username === 'test' && password === 'test') {
-            router.push('/dashboard');
-        } else {
-            setError('Identifiants invalides');
+        setError('');
+
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                // Stocker le token dans le localStorage
+                localStorage.setItem('token', data.token);
+                // Ici, vous pouvez mettre à jour votre contexte d'authentification si nécessaire
+                router.push('/dashboard');
+            } else {
+                setError(data.msg || 'Erreur de connexion');
+            }
+        } catch (err) {
+            console.error(err);
+            setError('Erreur serveur.');
         }
     };
 
@@ -31,8 +47,8 @@ export default function Login() {
                         type="text"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                         placeholder="Entrez votre nom d'utilisateur"
+                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                     />
                 </div>
                 <div className="mb-6">
@@ -41,8 +57,8 @@ export default function Login() {
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
                         placeholder="Entrez votre mot de passe"
+                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
                     />
                 </div>
                 <div className="flex items-center justify-between">
