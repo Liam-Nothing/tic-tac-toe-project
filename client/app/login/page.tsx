@@ -15,7 +15,7 @@ export default function Login() {
         setError('');
 
         try {
-            const response = await fetch('/api/auth/login', {
+            const response = await fetch('http://localhost:5000/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password }),
@@ -25,7 +25,6 @@ export default function Login() {
             if (response.ok) {
                 // Stocker le token dans le localStorage
                 localStorage.setItem('token', data.token);
-                // Ici, vous pouvez mettre à jour votre contexte d'authentification si nécessaire
                 router.push('/dashboard');
             } else {
                 setError(data.msg || 'Erreur de connexion');
