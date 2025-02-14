@@ -147,4 +147,41 @@ const playMove = async (req, res) => {
     }
 };
 
-module.exports = { createGame, joinGame, getFinishedGames, finishGame, playMove };
+// controllers/gameController.js
+
+const getOngoingGames = async (req, res) => {
+    try {
+        // Récupérer les parties dont le statut est 'waiting' ou 'in-progress'
+        const ongoingGames = await Game.find({ status: { $in: ['waiting', 'in-progress'] } })
+            .populate('players', 'username')
+            .exec();
+
+        return res.status(200).json({ ongoingGames });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des parties en cours:', error);
+        return res.status(500).json({ msg: 'Erreur serveur lors de la récupération des parties en cours.' });
+    }
+};
+
+const getGameDetails = async (req, res) => {
+    try {
+        const { uuid } = req.query;
+        if (!uuid) {
+            return res.status(400).json({ msg: 'UUID est requis.' });
+        }
+
+        // Recherche de la partie par UUID et population des joueurs et du vainqueur
+        const game = await Game.findOne({ uuid }).populate('players', 'username').populate('winner', 'username');
+
+        if (!game) {
+            return res.status(404).json({ msg: 'Partie non trouvée.' });
+        }
+
+        return res.status(200).json({ game });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des détails de la partie :', error);
+        return res.status(500).json({ msg: 'Erreur serveur lors de la récupération de la partie.' });
+    }
+};
+
+module.exports = { createGame, joinGame, getFinishedGames, finishGame, playMove, getOngoingGames, getGameDetails };
